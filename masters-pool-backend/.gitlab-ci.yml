@@ -1,0 +1,45 @@
+image: amazon/aws-cli:latest
+
+stages:
+  - build
+  - deploy
+
+variables:
+  IMAGE_TAG: $CI_COMMIT_SHORT_SA
+  ECR_URI: $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO_NAME
+
+before_script:
+  - echo "--> Logging in to AWS ECR..."
+  - aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+  - aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+  - aws configure set default.region $AWS_REGION
+  - aws ecr get-login-password | docker login --username AWS --password-stdin $ECR_URI
+
+build:
+  image: docker:latest
+  stage: build
+  services:
+    - docker:dind
+  script:
+    - echo "--> Building JAR File...
+    - ./gradlew clean build
+    - echo "--> Building Docker Image..."
+    - docker build -t $ECR_URI:$IMAGE_TAG
+    - docker tag $ECR_URI:$IMAGE_TAG $ECR_URI:latest
+    - echo "--> Pushing to ECR..."
+    - docker push $ECR_URI:$IMAGE_TAG
+    - docker push $ECR_URI:latest
+  only:
+    - main
+
+deploy:
+  stage: deploy
+  script:
+    - echo "--> Registering new ECS Task Definition..."
+    - |
+      aws ecs update-service \
+        --cluster $ECS_CLUSTER_NAME \
+        --service $ECS_SERVICE_NAME \
+        --force-new-deployment
+  only:
+    - main
