@@ -7,7 +7,7 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  ECR_REPOSITORY: masters-pool-backend
+  ECR_REPOSITORY: masters-pool-ecr
   ECS_SERVICE: masters-pool-service
   ECS_CLUSTER: masters-pool-cluster
   CONTAINER_NAME: masters-pool-backend
